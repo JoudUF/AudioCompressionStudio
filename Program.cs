@@ -1,20 +1,17 @@
 ﻿using System;
 using System.Windows.Forms;
 
-namespace Multimedia
+namespace AudioCompressionApp
 {
-    class Program
+    static class Program
     {
         [STAThread]
-        static void Main(string[] args)
+        static void Main()
         {
-            Console.WriteLine("Initializing PixelLab UI Thread Engine...");
-            
+            Application.SetHighDpiMode(HighDpiMode.SystemAware);
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-
-            // Run the main laboratory window
-            Application.Run(new LabForm());
+            Application.Run(new Form1());
         }
     }
 }
