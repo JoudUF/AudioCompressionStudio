@@ -63,6 +63,10 @@ namespace AudioCompressionApp
 
         private long originalFileSizeBytes = 0;
 
+        private int loadedFileSampleRate = 44100;
+
+        private int loadedFileQuantization = 256;
+
         // =====================================================
         // CONSTRUCTOR
         // =====================================================
@@ -558,6 +562,12 @@ namespace AudioCompressionApp
                             $"Channels: {reader.WaveFormat.Channels}\n" +
                             $"Bit Rate: {(reader.WaveFormat.AverageBytesPerSecond * 8) / 1000} kbps\n" +
                             $"Encoding: {reader.WaveFormat.Encoding}";
+
+                        loadedFileSampleRate = reader.WaveFormat.SampleRate;
+                        loadedFileQuantization = 256;
+
+                        numSampleRate.Value = Math.Clamp(loadedFileSampleRate, (int)numSampleRate.Minimum, (int)numSampleRate.Maximum);
+                        numQuantization.Value = Math.Clamp(loadedFileQuantization, (int)numQuantization.Minimum, (int)numQuantization.Maximum);
                     }
                 }
                 else
@@ -974,11 +984,6 @@ namespace AudioCompressionApp
         {
             CleanUpAudio();
 
-            currentFilePath = null;
-
-            lblProperties.Text =
-                "Audio Properties:\n- Waiting for file...";
-
             progressBar.Value = 0;
 
             ((LineSeries)plotRatio.Model.Series[0])
@@ -991,15 +996,28 @@ namespace AudioCompressionApp
 
             plotSpeed.InvalidatePlot(true);
 
-            btnPlay.Enabled = false;
+            if (!string.IsNullOrEmpty(currentFilePath) && !Path.GetExtension(currentFilePath).Equals(".pcomp", StringComparison.OrdinalIgnoreCase))
+            {
+                numSampleRate.Value = Math.Clamp(loadedFileSampleRate, (int)numSampleRate.Minimum, (int)numSampleRate.Maximum);
+                numQuantization.Value = Math.Clamp(loadedFileQuantization, (int)numQuantization.Minimum, (int)numQuantization.Maximum);
+            }
+            else
+            {
+                currentFilePath = null;
 
-            btnStop.Enabled = false;
+                lblProperties.Text =
+                    "Audio Properties:\n- Waiting for file...";
 
-            btnCompress.Enabled = false;
+                btnPlay.Enabled = false;
 
-            btnDecompress.Enabled = false;
+                btnStop.Enabled = false;
 
-            btnReset.Enabled = false;
+                btnCompress.Enabled = false;
+
+                btnDecompress.Enabled = false;
+
+                btnReset.Enabled = false;
+            }
         }
 
         // =====================================================

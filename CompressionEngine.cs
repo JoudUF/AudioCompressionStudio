@@ -13,7 +13,7 @@ namespace AudioCompressionApp
         private const float MU = 255f;
         private const int MuLawMax = 0x1FFF;
         private const int MuLawBias = 0x84;
-        private const int LossySourceSampleRateCap = 22050;
+        private const int LossySourceSampleRateCap = 16000;
 
         private const string MagicLegacy = "PCOMP";
         private const string MagicV2 = "PCMP2";
@@ -41,6 +41,7 @@ namespace AudioCompressionApp
 
                 var path = ResolveCompressionPath(
                     inputFilePath,
+                    reader.TotalTime.TotalSeconds,
                     sourceRate,
                     requestedRate,
                     sourceChannels);
@@ -366,6 +367,7 @@ namespace AudioCompressionApp
 
         private static CompressionPath ResolveCompressionPath(
             string inputPath,
+            double durationSeconds,
             int sourceRate,
             int requestedRate,
             int sourceChannels)
@@ -383,7 +385,17 @@ namespace AudioCompressionApp
                 };
             }
 
-            int targetRate = Math.Min(requestedRate, LossySourceSampleRateCap);
+            long fileSizeBytes = 0;
+            try
+            {
+                fileSizeBytes = new FileInfo(inputPath).Length;
+            }
+            catch {}
+
+            double sourceBitrate = durationSeconds > 0 ? (fileSizeBytes * 8.0) / durationSeconds : 128000;
+            int dynamicCap = Math.Max(8000, Math.Min(22050, (int)(sourceBitrate / 10)));
+
+            int targetRate = Math.Min(requestedRate, dynamicCap);
             bool mixToMono = sourceChannels > 1;
 
             return new CompressionPath
@@ -429,7 +441,7 @@ namespace AudioCompressionApp
             Math.Max(1f / sampleRate * 8f, 1f / (qLevels * 8f));
 
         private static float GetMaxStepSize(int sampleRate, int qLevels) =>
-            Math.Max(1f / sampleRate * 120f, 1f / Math.Max(8, qLevels / 4));
+            Math.Max(1f / sampleRate * 1000f, 0.1f);
 
         private static float GetDefaultStepSize(int sampleRate, int qLevels) =>
             Math.Max(1f / sampleRate * 40f, 1f / qLevels);
@@ -480,7 +492,7 @@ namespace AudioCompressionApp
                     ? (float)Math.Sqrt(sumSquares[ch] / counts[ch])
                     : peak;
 
-                float stepFromPeak = peak / 128f;
+                float stepFromPeak = peak / 12f;
                 float stepFromRms = rms * 2f / sampleRate;
                 float step = Math.Max(stepFromPeak, stepFromRms);
 
@@ -748,15 +760,15 @@ namespace AudioCompressionApp
             {
                 state.SameDirectionCount++;
 
-                if (state.SameDirectionCount >= 4)
+                if (state.SameDirectionCount >= 3)
                 {
-                    stepSize = Math.Min(stepSize * 2f, maxStep);
+                    stepSize = Math.Min(stepSize * 1.5f, maxStep);
                     state.SameDirectionCount = 0;
                 }
             }
             else
             {
-                stepSize = Math.Max(stepSize * 0.5f, minStep);
+                stepSize = Math.Max(stepSize * 0.9f, minStep);
                 state.SameDirectionCount = 0;
             }
 
@@ -977,8 +989,7 @@ namespace AudioCompressionApp
         private static void WritePcm16(WaveFileWriter writer, float sample)
         {
             sample = Math.Clamp(sample, -1f, 1f);
-            short pcm = (short)Math.Round(sample * short.MaxValue);
-            writer.WriteSample(pcm);
+            writer.WriteSample(sample);
         }
 
         private struct CompressionPath

@@ -211,6 +211,7 @@ namespace AudioCompressionApp
         {
             gridHistory.Rows.Clear();
             List<CompressionHistoryEntry> entries = CompressionHistory.Load();
+            bool hasLossy = entries.Exists(e => e.SourceFileName.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase));
 
             for (int i = 0; i < entries.Count; i++)
             {
@@ -219,7 +220,7 @@ namespace AudioCompressionApp
 
             lblStatus.Text = entries.Count == 0
                 ? "No history yet. Compress from the main window or test all algorithms here."
-                : $"{entries.Count} record(s) in history.";
+                : $"{entries.Count} record(s) in history." + (hasLossy ? " (Note: WAV size > MP3 size is expected for lossy sources like MP3 since WAV is uncompressed PCM.)" : "");
         }
 
         private void AddEntryRow(int index, CompressionHistoryEntry entry)
@@ -432,6 +433,7 @@ namespace AudioCompressionApp
                 return;
 
             CompressionHistory.Clear();
+            progressBar.Value = 0;
             LoadHistoryGrid();
         }
 

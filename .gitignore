@@ -1,2 +1,10 @@
-bin/
-obj/
+# C# / .NET specific
+[Bb]in/
+[Oo]bj/
+*.user
+*.suo
+*.cache
+*.log
+
+# Visual Studio Code
+.vscode/
